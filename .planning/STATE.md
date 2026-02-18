@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 1 of 3 (Core Music Fix)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 -- Roadmap created
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-18 -- Completed 01-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 2min
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-core-music-fix | 1/2 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: -
+- Last 5 plans: 01-01 (2min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -45,6 +45,10 @@ Recent decisions affecting current work:
 - [Roadmap]: 3-phase structure derived from requirements -- core fix, UI, packaging
 - [Roadmap]: PKG-01 (TOC file) assigned to Phase 1 since addon cannot load without it
 - [Roadmap]: MFIX-07/MFIX-08 (loading screen resilience, cleanup) in Phase 1 per research -- all critical pitfalls front-loaded
+- [01-01]: All subzones use same track pool (3 day + 3 night) per Blizzard's ZoneMusic.dbc data
+- [01-01]: PlayMusic() auto-fade as primary drum suppression, never StopMusic before PlayMusic in Nagrand
+- [01-01]: Day/night breakpoints 6:00/18:00, 60s self-sustaining timer for transitions
+- [01-01]: Pool-aware currentTrackID check prevents unnecessary restarts on subzone events
 
 ### Pending Todos
 
@@ -59,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-core-music-fix/01-CONTEXT.md
+Stopped at: Completed 01-01-PLAN.md
+Resume file: .planning/phases/01-core-music-fix/01-01-SUMMARY.md

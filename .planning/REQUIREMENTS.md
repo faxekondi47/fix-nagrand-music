@@ -9,15 +9,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Music Fix
 
-- [ ] **MFIX-01**: Addon detects when player enters Nagrand using locale-safe method (numeric map ID or zone text)
-- [ ] **MFIX-02**: Addon detects player's current subzone within Nagrand via GetSubZoneText()
-- [ ] **MFIX-03**: Correct Nagrand music track plays for each subzone (day/night variants using FileDataIDs 53585-53590)
-- [ ] **MFIX-04**: Buggy Orgrimmar drum music is suppressed while in Nagrand (PlayMusic auto-fade or CVar fallback)
-- [ ] **MFIX-05**: Music transitions smoothly between Nagrand subzones (no silence gaps or drum bursts)
-- [ ] **MFIX-06**: Addon does nothing outside Nagrand (zero interference with other zones)
-- [ ] **MFIX-07**: Music restarts correctly after loading screens (dungeons, hearthing, BGs) via PLAYER_ENTERING_WORLD handler
-- [ ] **MFIX-08**: Addon cleans up on zone exit, logout, and disconnect (StopMusic, restore CVar if modified)
-- [ ] **MFIX-09**: Empty subzone areas (open grassland with no subzone name) play default Nagrand general tracks
+- [x] **MFIX-01**: Addon detects when player enters Nagrand using locale-safe method (numeric map ID or zone text)
+- [x] **MFIX-02**: Addon detects player's current subzone within Nagrand via GetSubZoneText()
+- [x] **MFIX-03**: Correct Nagrand music track plays for each subzone (day/night variants using FileDataIDs 53585-53590)
+- [x] **MFIX-04**: Buggy Orgrimmar drum music is suppressed while in Nagrand (PlayMusic auto-fade or CVar fallback)
+- [x] **MFIX-05**: Music transitions smoothly between Nagrand subzones (no silence gaps or drum bursts)
+- [x] **MFIX-06**: Addon does nothing outside Nagrand (zero interference with other zones)
+- [x] **MFIX-07**: Music restarts correctly after loading screens (dungeons, hearthing, BGs) via PLAYER_ENTERING_WORLD handler
+- [x] **MFIX-08**: Addon cleans up on zone exit, logout, and disconnect (StopMusic, restore CVar if modified)
+- [x] **MFIX-09**: Empty subzone areas (open grassland with no subzone name) play default Nagrand general tracks
 
 ### User Interface
 
@@ -29,7 +29,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Packaging
 
-- [ ] **PKG-01**: Correct .toc file with Interface 20505, addon metadata, and SavedVariables declaration
+- [x] **PKG-01**: Correct .toc file with Interface 20505, addon metadata, and SavedVariables declaration
 - [ ] **PKG-02**: GitHub Actions workflow using BigWigsMods/packager@v2 for automated releases
 - [ ] **PKG-03**: .pkgmeta file configured for CurseForge TBC Classic Anniversary distribution
 - [ ] **PKG-04**: README.md with installation instructions, usage, and known limitations
@@ -68,21 +68,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MFIX-01 | Phase 1 | Pending |
-| MFIX-02 | Phase 1 | Pending |
-| MFIX-03 | Phase 1 | Pending |
-| MFIX-04 | Phase 1 | Pending |
-| MFIX-05 | Phase 1 | Pending |
-| MFIX-06 | Phase 1 | Pending |
-| MFIX-07 | Phase 1 | Pending |
-| MFIX-08 | Phase 1 | Pending |
-| MFIX-09 | Phase 1 | Pending |
+| MFIX-01 | Phase 1 | Complete |
+| MFIX-02 | Phase 1 | Complete |
+| MFIX-03 | Phase 1 | Complete |
+| MFIX-04 | Phase 1 | Complete |
+| MFIX-05 | Phase 1 | Complete |
+| MFIX-06 | Phase 1 | Complete |
+| MFIX-07 | Phase 1 | Complete |
+| MFIX-08 | Phase 1 | Complete |
+| MFIX-09 | Phase 1 | Complete |
 | UI-01 | Phase 2 | Pending |
 | UI-02 | Phase 2 | Pending |
 | UI-03 | Phase 2 | Pending |
 | UI-04 | Phase 2 | Pending |
 | UI-05 | Phase 2 | Pending |
-| PKG-01 | Phase 1 | Pending |
+| PKG-01 | Phase 1 | Complete |
 | PKG-02 | Phase 3 | Pending |
 | PKG-03 | Phase 3 | Pending |
 | PKG-04 | Phase 3 | Pending |
