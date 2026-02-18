@@ -28,12 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Player hearthing out of Nagrand and back hears correct music resume after the loading screen
   4. Player in open grassland areas (no subzone name) hears default Nagrand general tracks
   5. Player leaving Nagrand hears normal game music resume with no leftover Nagrand tracks playing
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md -- Create TOC manifest and complete Lua addon with all core music fix logic
+- [ ] 01-02-PLAN.md -- In-game validation and fixes for UiMapID, drum suppression, and Interface version
 
 ### Phase 2: User Interface
 **Goal**: Player can check addon status, toggle the fix on/off, enable debug output, and see a login confirmation -- all persisted across sessions
@@ -70,6 +69,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Music Fix | 0/3 | Not started | - |
+| 1. Core Music Fix | 0/2 | Not started | - |
 | 2. User Interface | 0/1 | Not started | - |
 | 3. Packaging and Release | 0/1 | Not started | - |
