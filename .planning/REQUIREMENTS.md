@@ -1,7 +1,7 @@
 # Requirements: FixNagrandMusic
 
 **Defined:** 2026-02-18
-**Core Value:** Correct Nagrand music plays in every subzone — the player hears what they're supposed to hear, seamlessly.
+**Core Value:** Correct Nagrand music plays in every subzone -- the player hears what they're supposed to hear, seamlessly.
 
 ## v1 Requirements
 
@@ -68,30 +68,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MFIX-01 | - | Pending |
-| MFIX-02 | - | Pending |
-| MFIX-03 | - | Pending |
-| MFIX-04 | - | Pending |
-| MFIX-05 | - | Pending |
-| MFIX-06 | - | Pending |
-| MFIX-07 | - | Pending |
-| MFIX-08 | - | Pending |
-| MFIX-09 | - | Pending |
-| UI-01 | - | Pending |
-| UI-02 | - | Pending |
-| UI-03 | - | Pending |
-| UI-04 | - | Pending |
-| UI-05 | - | Pending |
-| PKG-01 | - | Pending |
-| PKG-02 | - | Pending |
-| PKG-03 | - | Pending |
-| PKG-04 | - | Pending |
+| MFIX-01 | Phase 1 | Pending |
+| MFIX-02 | Phase 1 | Pending |
+| MFIX-03 | Phase 1 | Pending |
+| MFIX-04 | Phase 1 | Pending |
+| MFIX-05 | Phase 1 | Pending |
+| MFIX-06 | Phase 1 | Pending |
+| MFIX-07 | Phase 1 | Pending |
+| MFIX-08 | Phase 1 | Pending |
+| MFIX-09 | Phase 1 | Pending |
+| UI-01 | Phase 2 | Pending |
+| UI-02 | Phase 2 | Pending |
+| UI-03 | Phase 2 | Pending |
+| UI-04 | Phase 2 | Pending |
+| UI-05 | Phase 2 | Pending |
+| PKG-01 | Phase 1 | Pending |
+| PKG-02 | Phase 3 | Pending |
+| PKG-03 | Phase 3 | Pending |
+| PKG-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 after roadmap creation*
