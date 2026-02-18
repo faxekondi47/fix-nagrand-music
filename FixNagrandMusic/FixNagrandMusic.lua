@@ -33,6 +33,7 @@ local currentTrackID = nil     -- currently playing FileDataID
 local isActive = false         -- whether addon is actively managing music
 local lastTimeOfDay = nil      -- last known day/night state (true = day)
 local savedMusicCVar = nil     -- user's original Sound_EnableMusic value
+local currentSubzone = nil     -- current subzone name from GetSubZoneText() (MFIX-02, used by Phase 2 UI-01)
 
 -- === SECTION 3: UTILITY FUNCTIONS ===
 
@@ -42,6 +43,11 @@ end
 
 local function printInfo(msg)
     print("|cFF00FF00FixNagrandMusic:|r " .. msg)
+end
+
+-- Update the tracked subzone name (MFIX-02)
+local function updateSubzone()
+    currentSubzone = GetSubZoneText() or ""
 end
 
 -- === SECTION 4: ZONE DETECTION (MFIX-01, MFIX-02) ===
@@ -96,6 +102,9 @@ end
 -- PlayMusic() directly replaces the current track and auto-fades the
 -- buggy built-in zone music without a gap where drums could re-assert.
 local function playNagrandMusic()
+    -- Track the current subzone on every music evaluation (MFIX-02)
+    updateSubzone()
+
     -- Respect user's music setting (MFIX-04 pitfall 5)
     if GetCVar("Sound_EnableMusic") ~= "1" then
         printInfo("Music is disabled in your settings. Enable it to hear the fix.")
@@ -185,6 +194,7 @@ end
 -- Deactivate the addon when leaving Nagrand or logging out
 local function deactivateAddon()
     stopNagrandMusic()
+    currentSubzone = nil
 
     -- Restore CVar if we modified it
     if savedMusicCVar and savedMusicCVar ~= GetCVar("Sound_EnableMusic") then
