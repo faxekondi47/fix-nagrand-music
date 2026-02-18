@@ -1,0 +1,9 @@
+## Interface: 20505
+## Title: FixNagrandMusic
+## Notes: Fixes the bug where Orgrimmar drum music plays in Nagrand instead of the correct zone music.
+## Author: mig
+## Version: @project-version@
+## X-Category: Audio & Video
+## SavedVariables: FixNagrandMusicDB
+
+FixNagrandMusic.lua
