@@ -58,10 +58,10 @@ Plans:
   1. Pushing a git tag triggers GitHub Actions and produces a downloadable release artifact
   2. CurseForge listing shows the addon under TBC Classic Anniversary with correct metadata
   3. README contains installation instructions, usage examples (`/fng` commands), and known limitations
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- CI/CD pipeline (GitHub Actions, luacheck, .pkgmeta, CurseForge metadata) and README documentation
 
 ## Progress
 
