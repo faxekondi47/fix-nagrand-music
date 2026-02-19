@@ -21,6 +21,17 @@ local NAGRAND_TRACKS = {
     },
 }
 
+-- FileDataID to file path lookup for status display (UI-01)
+-- No runtime API exists to resolve FileDataID to path; hardcoded from Wowhead TBC sound database
+local TRACK_PATHS = {
+    [53585] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkDay01.mp3",
+    [53586] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkDay02.mp3",
+    [53587] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkDay03.mp3",
+    [53588] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkNight01.mp3",
+    [53589] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkNight02.mp3",
+    [53590] = "Sound\\Music\\ZoneMusic\\Nagrand\\NA_GeneralWalkNight03.mp3",
+}
+
 -- UiMapID for Nagrand (Outland). Needs in-game validation -- may be 477.
 local NAGRAND_MAP_ID = 107
 
@@ -37,12 +48,30 @@ local currentSubzone = nil     -- current subzone name from GetSubZoneText() (MF
 
 -- === SECTION 3: UTILITY FUNCTIONS ===
 
+local FNG_PREFIX = "|cFF00CC66FNG|r: "
+
 local function printError(msg)
-    print("|cFFFF0000FixNagrandMusic Error:|r " .. msg)
+    print(FNG_PREFIX .. "|cFFFF0000" .. msg .. "|r")
 end
 
 local function printInfo(msg)
-    print("|cFF00FF00FixNagrandMusic:|r " .. msg)
+    print(FNG_PREFIX .. msg)
+end
+
+local function printDebug(msg)
+    if FixNagrandMusicDB and FixNagrandMusicDB.debug then
+        print(FNG_PREFIX .. "|cFFFFFF00[DEBUG] " .. msg .. "|r")
+    end
+end
+
+local function getAddonVersion()
+    if C_AddOns and C_AddOns.GetAddOnMetadata then
+        local version = C_AddOns.GetAddOnMetadata("FixNagrandMusic", "Version")
+        if version and not version:find("@") then
+            return version
+        end
+    end
+    return "dev"
 end
 
 -- Update the tracked subzone name (MFIX-02)
@@ -102,6 +131,11 @@ end
 -- PlayMusic() directly replaces the current track and auto-fades the
 -- buggy built-in zone music without a gap where drums could re-assert.
 local function playNagrandMusic()
+    -- Respect toggle state (UI-02)
+    if FixNagrandMusicDB and not FixNagrandMusicDB.enabled then
+        return
+    end
+
     -- Track the current subzone on every music evaluation (MFIX-02)
     updateSubzone()
 
@@ -179,6 +213,11 @@ end
 
 -- Activate the addon when entering Nagrand
 local function activateAddon()
+    -- Respect toggle state (UI-02)
+    if FixNagrandMusicDB and not FixNagrandMusicDB.enabled then
+        return
+    end
+
     -- Save user's current music setting before any potential changes
     savedMusicCVar = GetCVar("Sound_EnableMusic")
 
@@ -206,6 +245,21 @@ end
 -- === SECTION 9: EVENT HANDLERS (MFIX-01, MFIX-06, MFIX-07, MFIX-08) ===
 
 local handlers = {}
+
+-- SavedVariables initialization (UI-05)
+function handlers.ADDON_LOADED(addonName)
+    if addonName ~= "FixNagrandMusic" then return end
+    if FixNagrandMusicDB == nil then
+        FixNagrandMusicDB = {}
+    end
+    if FixNagrandMusicDB.enabled == nil then
+        FixNagrandMusicDB.enabled = true
+    end
+    if FixNagrandMusicDB.debug == nil then
+        FixNagrandMusicDB.debug = false
+    end
+    frame:UnregisterEvent("ADDON_LOADED")
+end
 
 -- Major zone change: entering or leaving Nagrand
 function handlers.ZONE_CHANGED_NEW_AREA()
