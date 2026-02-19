@@ -26,7 +26,14 @@ Correct Nagrand music plays in every subzone -- the player hears what they're su
 
 ### Active
 
-(None -- v1.0 shipped. Define new requirements with `/gsd:new-milestone`.)
+## Current Milestone: v1.1 Smooth Transitions
+
+**Goal:** Fix music transition edge cases — smooth fade-outs, clean zone exits, and optional Orgrimmar music suppression.
+
+**Target features:**
+- Fix abrupt music stop on hearthstone out of Nagrand
+- Fix Orgrimmar music burst when walking out of Nagrand
+- Research and optionally implement Orgrimmar music suppression as addon option
 
 ### Out of Scope
 
@@ -71,4 +78,4 @@ Known issues from testing:
 | Day/night breakpoints 6:00/18:00 | Standard WoW day/night cycle | ✓ Good -- matches game time |
 
 ---
-*Last updated: 2026-02-19 after v1.0 milestone*
+*Last updated: 2026-02-19 after v1.1 milestone start*
