@@ -261,10 +261,21 @@ function handlers.ADDON_LOADED(addonName)
     frame:UnregisterEvent("ADDON_LOADED")
 end
 
+-- Login notification (UI-04)
+function handlers.PLAYER_LOGIN()
+    local version = getAddonVersion()
+    local msg = "FixNagrandMusic v" .. version .. " loaded"
+    if not FixNagrandMusicDB.enabled then
+        msg = msg .. " (disabled)"
+    end
+    printInfo(msg)
+end
+
 -- Major zone change: entering or leaving Nagrand
 function handlers.ZONE_CHANGED_NEW_AREA()
     -- Defer by one frame to ensure zone data is current
     C_Timer.After(0, function()
+        printDebug("ZONE_CHANGED_NEW_AREA: " .. (GetZoneText() or "?") .. " / " .. (GetSubZoneText() or ""))
         if isInNagrand() then
             if not isActive then
                 activateAddon()
@@ -280,6 +291,7 @@ end
 -- Subzone change within Nagrand: re-assert PlayMusic to suppress any
 -- drum re-triggering from the zone music system (MFIX-05, MFIX-09)
 function handlers.ZONE_CHANGED()
+    printDebug("ZONE_CHANGED: " .. (GetZoneText() or "?") .. " / " .. (GetSubZoneText() or ""))
     if isActive then
         playNagrandMusic()
     end
@@ -289,6 +301,7 @@ end
 -- Indoor/outdoor transition: same as ZONE_CHANGED.
 -- Nagrand has no separate indoor music, so we just re-assert the track.
 function handlers.ZONE_CHANGED_INDOORS()
+    printDebug("ZONE_CHANGED_INDOORS: " .. (GetZoneText() or "?") .. " / " .. (GetSubZoneText() or ""))
     if isActive then
         playNagrandMusic()
     end
@@ -327,4 +340,57 @@ end)
 -- Register all events that have handlers
 for event in pairs(handlers) do
     frame:RegisterEvent(event)
+end
+
+-- === SECTION 11: SLASH COMMANDS (UI-01, UI-02, UI-03) ===
+
+local function showStatus()
+    if not FixNagrandMusicDB.enabled then
+        printInfo("Disabled")
+        return
+    end
+    if not isActive then
+        printInfo("Enabled | Not in Nagrand")
+        return
+    end
+    local path = TRACK_PATHS[currentTrackID] or "No track playing"
+    local subzone = currentSubzone
+    if not subzone or subzone == "" then
+        subzone = "open area"
+    end
+    printInfo("Enabled | " .. subzone .. " | " .. path)
+end
+
+local function toggleAddon()
+    FixNagrandMusicDB.enabled = not FixNagrandMusicDB.enabled
+    if FixNagrandMusicDB.enabled then
+        printInfo("Enabled")
+        if isInNagrand() then
+            activateAddon()
+        end
+    else
+        printInfo("Disabled")
+        deactivateAddon()
+    end
+end
+
+local function toggleDebug()
+    FixNagrandMusicDB.debug = not FixNagrandMusicDB.debug
+    if FixNagrandMusicDB.debug then
+        printInfo("Debug mode ON")
+    else
+        printInfo("Debug mode OFF")
+    end
+end
+
+SLASH_FNG1 = "/fng"
+SlashCmdList["FNG"] = function(msg)
+    local command = msg:lower():match("^(%S+)") or ""
+    if command == "toggle" then
+        toggleAddon()
+    elseif command == "debug" then
+        toggleDebug()
+    else
+        showStatus()
+    end
 end
