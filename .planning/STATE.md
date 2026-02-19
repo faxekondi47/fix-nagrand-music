@@ -58,7 +58,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+3 pending:
+- **Fix abrupt music stop on hearthstone out of Nagrand** (core) -- StopMusic() cuts track instantly with no fade-out
+- **Fix Orgrimmar music playing when walking out of Nagrand** (core) -- brief burst of wrong music during zone transition
+- **Research disabling Orgrimmar music as addon option** (core) -- investigate MuteSoundFile() and other suppression methods
 
 ### Blockers/Concerns
 
