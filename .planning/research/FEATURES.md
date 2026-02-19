@@ -1,200 +1,226 @@
-# Feature Research
+# Feature Research: Smooth Music Transitions
 
-**Domain:** WoW TBC Classic Anniversary addon -- single-zone music bug fix
-**Researched:** 2026-02-18
-**Confidence:** HIGH
+**Domain:** WoW TBC Classic Anniversary addon -- music transition polish and optional suppression
+**Researched:** 2026-02-19
+**Confidence:** HIGH (API behavior verified with official docs; implementation patterns verified from shipped addons)
 
 ## Context
 
-The Nagrand music bug is a well-documented, long-standing Blizzard bug where Orgrimmar drum loops (or war drum loops) play in Nagrand instead of the correct zone music. Bug reports span from original TBC Classic through TBC Classic Anniversary (2026), confirming Blizzard has not fixed it. This addon uses `PlayMusic()` / `StopMusic()` and zone detection events to override the broken music with the correct Nagrand tracks per subzone.
+FixNagrandMusic v1.0 ships a working Nagrand music fix with zone detection, day/night variants, and Orgrimmar drum suppression. Three user-facing issues remain:
 
-Nagrand has 35+ subzones, each potentially mapped to different music tracks. The addon scope is intentionally narrow: fix one zone's music, nothing more.
+1. **Hearthstone exit cuts music abruptly** -- `StopMusic()` is instant (no fade since WoW patch 2.2). Using Hearthstone triggers `PLAYER_ENTERING_WORLD`, addon detects not-in-Nagrand, calls `StopMusic()`, music vanishes mid-note.
+2. **Walking out of Nagrand triggers brief Orgrimmar drums** -- when the player crosses the zone boundary on foot/mount, `ZONE_CHANGED_NEW_AREA` fires, addon calls `StopMusic()`, and the game's built-in (bugged) zone music briefly reasserts the Orgrimmar drums before the destination zone's correct music takes over.
+3. **No option to suppress Orgrimmar music entirely** -- power users who find the drums annoying everywhere (not just Nagrand) have no toggle to mute them globally.
 
-## Feature Landscape
+These are polish features for a v1.1/v2.0 milestone. The core fix works; this is about making transitions feel native.
 
-### Table Stakes (Users Expect These)
+## Table Stakes
 
-Features users assume exist. Missing these = product feels incomplete or broken.
+Features users expect from a "smooth transitions" update. Missing these makes the update feel pointless.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Correct music per Nagrand subzone | The entire point of the addon. Players download it to hear the right music. | MEDIUM | Requires mapping all ~35 subzones to their correct music file IDs. Core data table + `ZONE_CHANGED` event handling. Most of the work is identifying the correct FileDataIDs/paths for each subzone. |
-| Automatic activation in Nagrand | Must "just work" with zero configuration. Install it, enter Nagrand, hear correct music. | LOW | Check `GetZoneText() == "Nagrand"` on zone events. Gate all logic behind this check. |
-| Subzone transition handling | When walking between subzones, music should change appropriately without jarring cuts or silence. | MEDIUM | `PlayMusic()` fades out built-in music automatically. But `StopMusic()` is immediate (no fade post-patch 2.2). Need to call `PlayMusic(newTrack)` directly rather than `StopMusic()` then `PlayMusic()` to avoid silence gaps. Test whether calling `PlayMusic()` while another `PlayMusic()` track is playing transitions cleanly. |
-| No interference outside Nagrand | Addon must do absolutely nothing when player is not in Nagrand. Zero performance cost, zero audio interference elsewhere. | LOW | Call `StopMusic()` when leaving Nagrand so built-in zone music resumes in other zones. Gate all event processing behind a zone check. |
-| Clean startup and shutdown | Music fix activates on entering Nagrand, deactivates on leaving. No orphaned music loops playing in Orgrimmar because the player hearthed out. | LOW | Handle `ZONE_CHANGED_NEW_AREA` for major zone transitions. Call `StopMusic()` on zone exit. Handle `PLAYER_LEAVING_WORLD` (logout/disconnect) for cleanup. |
-| Correct TOC metadata | Proper addon name, description, author, version in the `.toc` file. CurseForge-compatible packaging. | LOW | Interface version `20505` for TBC Classic Anniversary. Standard `.toc` fields. |
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| Fade-out on zone exit (hearthstone) | The #1 most noticeable rough edge. Every music app fades out; abrupt silence is jarring. Users expect "smooth" to mean smooth. | MEDIUM | Modifies `stopNagrandMusic()` path | Requires CVar-based volume ramping (see Technical Analysis below). No native fade API exists post-patch 2.2. |
+| Fade-out on zone exit (walking/flying) | Same as hearthstone, but for continuous movement. Equally jarring when walking across the Nagrand/Zangarmarsh border. | MEDIUM | Same fade mechanism as hearthstone case, but must also handle the Orgrimmar drum burst (see below) | Shares implementation with hearthstone fade. |
+| No Orgrimmar drum burst on walk-out | The brief flash of wrong music actively undermines trust in the addon. Users will think the fix is broken if they hear drums when leaving. | HIGH | Requires solving the StopMusic-to-zone-music race condition | This is the hardest problem. See "Transition Race Condition" in Technical Analysis. |
+| Volume restoration after fade | If the addon ramps `Sound_MusicVolume` down for a fade, it MUST restore the user's original volume. Silently zeroing someone's music volume is a critical bug. | LOW | Required by fade-out implementation | Save CVar before fade, restore after. The addon already has `savedMusicCVar` pattern for `Sound_EnableMusic`. |
+| Fade works with any user volume | The fade must be relative to the user's current music volume, not hardcoded. A user at 30% volume should fade 30% to 0%, not 100% to 0%. | LOW | Required by fade-out implementation | Read `GetCVar("Sound_MusicVolume")` before starting fade. |
 
-### Differentiators (Competitive Advantage)
+## Differentiators
 
-Features that set the product apart. Not required, but valued by engaged users.
+Features that make this update genuinely valuable beyond "the bare minimum works."
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| `/fixnagrand` slash command with status | Gives users confidence the addon is working. `/fixnagrand` or `/fng` prints current state: enabled/disabled, current subzone, current track playing. | LOW | Simple `SlashCmdList` handler. Useful for support/bug reports too. |
-| Toggle on/off via slash command | Lets users disable the fix without uninstalling the addon. `/fixnagrand toggle` or `/fng off`. | LOW | Boolean flag, persisted via `SavedVariables`. When disabled, call `StopMusic()` and stop processing events. |
-| Debug mode | `/fixnagrand debug` prints zone change events, subzone names, and which music file is being played to chat. Essential for contributors reporting issues and for development. | LOW | Conditional `print()` calls gated behind a debug flag. Invaluable during development, costs nothing in production. |
-| Login notification | Brief one-line chat message on login: "FixNagrandMusic v1.0 loaded. Type /fng for help." | LOW | Standard addon pattern. Fires on `PLAYER_LOGIN`. Lets user know it is installed and active without being intrusive. |
-| Halaa PvP-aware music | Halaa is a contested PvP town. If the bug specifically mangles Halaa music (the "war drums" may actually be intentional there when Horde controls it), the addon should handle this correctly -- either playing the right Halaa combat music or leaving Halaa's music alone if it is working as intended. | MEDIUM | Requires verifying Halaa's intended music behavior vs. the bug. May need faction/control-state detection. Research needed during implementation. |
-| Persisted settings | Remember toggle state and debug mode between sessions using `SavedVariablesPerCharacter`. | LOW | Standard WoW pattern. Declare in `.toc`, load on `ADDON_LOADED`, auto-saved on logout. |
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| Optional Orgrimmar music suppression | Power users can silence the bugged Orgrimmar drums globally, not just in Nagrand. Clean addon option, not a workaround. | MEDIUM | New `FixNagrandMusicDB.muteOrgrimmar` setting, slash command extension | Uses `MuteSoundFile()` API (available since TBC Classic 2.5.1). Must call on every login and UI reload since mutes do not persist across client restarts. |
+| Configurable fade duration | Let users control how long the fade takes (e.g., 0.5s, 1s, 2s). Some prefer quick, some prefer cinematic. | LOW | Requires fade mechanism to exist first | Default to 1.5 seconds (matches WoW's built-in PlayMusic fade-in feel). Store in `FixNagrandMusicDB.fadeDuration`. |
+| Debug logging for transitions | Extend existing debug mode to log fade progress, volume changes, and transition states. Essential for diagnosing "I hear drums when walking out" reports. | LOW | Existing debug infrastructure | Add `printDebug()` calls in fade ticker and transition logic. |
+| Graceful degradation if CVar is protected | If a future WoW patch restricts `SetCVar("Sound_MusicVolume")` in combat or other contexts, the addon should fall back to instant stop rather than erroring. | LOW | pcall wrapper around SetCVar | Defensive coding. Not currently needed but good practice. |
 
-### Anti-Features (Deliberately NOT Building)
+## Anti-Features
 
-Features that seem good but create problems, scope creep, or violate the addon's purpose.
+Features to explicitly NOT build for this milestone.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Full music overhaul / custom playlists | "While you're at it, let me pick my own music for Nagrand" | Completely different addon (Soundtrack already does this). Massively expands scope. Requires UI, playlist management, file scanning. | Point users to the Soundtrack addon for full music customization. FixNagrandMusic restores *intended* behavior, not custom behavior. |
-| Volume controls | "Let me adjust the music volume" | WoW already has music volume controls in Sound settings. Duplicating this is pointless and confusing. No addon API for volume control anyway. | Tell users to use the built-in Sound settings. |
-| Music for other zones | "Can you also fix Hellfire Peninsula / Zangarmarsh / etc?" | Scope creep. Each zone needs its own research, subzone mapping, and music file identification. The addon name is literally "FixNagrandMusic." | If other zones have bugs, create separate focused addons or expand scope in a deliberate v2 with a name change. Do not silently grow. |
-| GUI configuration panel | "Add an options panel with checkboxes" | Overkill for a bug fix addon with 2 settings (enabled + debug). Adds Ace3/LibStub dependencies or manual frame code. Increases maintenance surface. | Slash commands are sufficient. `/fng toggle` and `/fng debug` cover all user-facing settings. |
-| Combat music override | "Play special music during combat in Nagrand" | Different feature entirely. Combat music is a separate sound channel. Van32's CombatMusic addon exists for this. | Out of scope. Leave combat music alone. |
-| Minimap button | "Add a minimap icon to toggle the addon" | Requires LibDataBroker or manual minimap button code. Overkill for a fix addon. Clutters minimap for something users toggle once (if ever). | Slash command only. |
-| Support for non-Outland Nagrand (WoD) | "Does this work in Draenor Nagrand?" | Completely different zone, different music files, different bug (if any). WoD Nagrand is a separate zone ID. TBC Anniversary players are the target audience. | Out of scope. If WoD Nagrand has issues, that is a different addon. |
-| Localization of slash commands | "Support /fixnagrandmusik for German clients" | Unnecessary complexity. Slash commands are conventionally English in WoW addons. Zone names from GetZoneText()/GetSubZoneText() are already localized by the game client. | Use English slash commands. Zone detection works automatically across locales because WoW returns localized names, but the addon needs localized zone name lookups (this IS table stakes, handled in the zone name constant). |
+| Anti-Feature | Why It Seems Useful | Why Avoid | What to Do Instead |
+|--------------|---------------------|-----------|-------------------|
+| Cross-fade (overlap old and new music) | Cinematic feel, like a real soundtrack | WoW only has one PlayMusic channel. Cannot play two addon music tracks simultaneously. Cross-fade is physically impossible with the API. | Fade-out to silence, let destination zone music fade-in naturally (WoW handles this). |
+| Fade-in when entering Nagrand | Symmetry with fade-out | PlayMusic already fades in built-in zone music naturally when called. Adding a manual CVar ramp-up on entry would fight with PlayMusic's built-in behavior and could cause volume jumps. | Let PlayMusic's native fade-in behavior handle entry. It already works well in v1.0. |
+| Suppress all zone music bugs globally | "Fix every zone, not just Nagrand" | Massive scope expansion. Each zone needs research, FileDataID mapping, and testing. Turns a focused fix into a general-purpose music addon. | Keep scope to Nagrand. If users request other zones, that is a separate addon or a deliberate major version. |
+| Music selection per subzone | "Let me pick which Nagrand track plays in Garadar" | Turns the addon from a bug fix into a music customization tool. Soundtrack addon already does this. | The addon restores intended behavior. Random track selection within the correct day/night pool is faithful to original design. |
+| Suppression of non-Orgrimmar music | "Can I also mute Stormwind music?" | Feature creep. The Orgrimmar suppression is justified because it is the root cause of the bug this addon fixes. Generalizing to arbitrary music muting is a different product. | Point users to the MuteSoundFile addon for general sound muting. |
+| GUI options panel for fade settings | "Add a slider for fade duration" | Overkill for one setting. Adds UI framework dependencies. Slash commands are the established pattern. | `/fng fade 1.5` slash command is sufficient. |
+
+## Technical Analysis
+
+### Fade-Out via CVar Volume Ramping
+
+**The approach:** Since `StopMusic()` is instant (no fade post-patch 2.2) and there is no `FadeMusic()` API, the only way to achieve a fade-out is to gradually ramp `Sound_MusicVolume` CVar from the user's current value down to 0, then call `StopMusic()`, then restore the CVar.
+
+**Proven pattern:** The wow-voiceover addon (mrthinger/wow-voiceover) implements exactly this via `SlideVolume()`:
+- Uses a frame `OnUpdate` handler for smooth per-frame interpolation
+- Calculates a rate: `(target - current) / duration`
+- Each frame: `next = current + rate * elapsed`
+- Uses `SetCVar("Sound_MusicVolume", next)` each frame
+- Epsilon threshold (`0.01`) for completion detection
+- Callback on completion (for calling `StopMusic()` and restoring CVar)
+
+**Confidence:** HIGH -- This is a shipped addon using this exact technique. The VoiceOver addon specifically notes that on WoW 2.4.3 (TBC client baseline), toggling CVars causes music to fade gradually (~0.4-0.5s), suggesting the CVar approach is well-supported on this client version.
+
+**Implementation choice: OnUpdate vs C_Timer.After**
+
+| Approach | Pros | Cons | Verdict |
+|----------|------|------|---------|
+| Frame `OnUpdate` handler | Smooth per-frame updates, elapsed-time-aware, proven pattern from VoiceOver addon | Slightly more code (need a frame), runs every frame while active | **Use this.** Fade is a short-duration, frame-rate-sensitive operation. |
+| `C_Timer.After` chain | Simpler code, already used in the addon | Timer resolution is limited (~16ms minimum), chaining creates many closures, not elapsed-time-aware | Not suitable for smooth interpolation. |
+| `C_Timer.NewTicker` | Repeating timer, cleaner than After chain | Same resolution issues as After, not frame-synced | Better than After chain but still inferior to OnUpdate for visual/audio smoothness. |
+
+**Recommendation:** Use a dedicated hidden frame with an `OnUpdate` script for the fade. Only set the script when fading (set to nil when idle to avoid per-frame cost when not fading). This matches the VoiceOver addon pattern and keeps CPU cost to zero when not actively fading.
+
+### Transition Race Condition (Walk-Out Drum Burst)
+
+**The problem sequence:**
+1. Player walks from Nagrand into Zangarmarsh
+2. `ZONE_CHANGED_NEW_AREA` fires
+3. Addon detects not-in-Nagrand, calls `StopMusic()`
+4. WoW's built-in zone music system reasserts its queued track
+5. Because of the Nagrand bug, the queued track is Orgrimmar drums
+6. Drums play briefly until Zangarmarsh's zone music takes over
+
+**Why this is hard:** `StopMusic()` only stops addon-played music. The moment it runs, the built-in zone music system is free to play whatever it wants -- and what it wants to play (in this bugged state) is Orgrimmar drums. There is a window between `StopMusic()` and the destination zone music asserting itself.
+
+**Solution approaches ranked:**
+
+| Approach | How It Works | Feasibility | Drawback |
+|----------|-------------|-------------|----------|
+| **Delayed StopMusic with fade** | Start a CVar volume fade when leaving Nagrand. Call `StopMusic()` at the end of the fade (e.g., 1.5s later). By then, the destination zone's music system has likely asserted. | HIGH | If destination music is slower than the fade, there could be a brief overlap where both are "playing" (addon track at 0 volume, zone music starting). This is actually fine -- the addon track is inaudible at that point. |
+| **MuteSoundFile on Orgrimmar tracks** | Mute the Orgrimmar drum FileDataIDs (53197, 53198, 53200) so they can never play. | MEDIUM | MuteSoundFile resets on client restart. Must re-apply on every `PLAYER_ENTERING_WORLD`. Also, this is a more aggressive intervention -- it prevents Orgrimmar music from playing even when the player is actually in Orgrimmar. Better as an opt-in feature. |
+| **Keep PlayMusic running briefly** | Do not call `StopMusic()` immediately. Let the addon music continue for 1-2 seconds after leaving Nagrand, then fade and stop. | HIGH | The addon music would play for a moment in the destination zone. But with the fade, users would hear a smooth transition from Nagrand music to destination music, which actually feels natural. |
+| **Play a silent track** | Call `PlayMusic()` with a known-silent FileDataID to bridge the gap. | LOW | No reliable silent FileDataID exists in the game data. Creating addon sound files adds packaging complexity. |
+
+**Recommendation:** Combine approaches 1 and 3. When leaving Nagrand:
+1. Do NOT call `StopMusic()` immediately
+2. Start a CVar volume fade (1.5s default)
+3. At fade completion, call `StopMusic()` and restore CVar
+4. By the time the fade finishes, the destination zone's music has had 1.5s to assert itself, eliminating the drum burst window
+
+This is the cleanest solution. The user hears Nagrand music fade out smoothly as they cross the border, and by the time it reaches silence, the correct destination music is already playing.
+
+### MuteSoundFile for Orgrimmar Suppression
+
+**API:** `MuteSoundFile(fileDataID)` / `UnmuteSoundFile(fileDataID)`
+**Availability:** Added in patch 2.5.1 (TBC Classic). Available in TBC Classic Anniversary.
+**Persistence:** Muted files persist through `/reload` and relog, but reset on client restart.
+**Scope:** Works on "all internal game sounds, addon sounds and sounds played manually."
+
+**Orgrimmar music FileDataIDs (from Wowhead TBC sound database):**
+- `53197` -- orgrimmar01-moment.mp3 (Zone Music Day Orgrimmar City, sound ID 2902)
+- `53198` -- orgrimmar01-zone.mp3 (Zone-Orgrimmar, sound ID 2901)
+- `53200` -- orgrimmar02-zone.mp3 (Zone-Orgrimmar, sound ID 2901)
+
+**Confidence on MuteSoundFile working on zone music:** MEDIUM. The API documentation says it works on "all internal game sounds." Zone music files are internal game sounds. Multiple addons (MuteSoundFile, Mute Annoying WoW Sounds) use this API to mute various game sounds. However, no source explicitly confirms or denies that it works on the built-in zone music system's playback. This needs in-game testing before committing to this feature.
+
+**UX consideration:** Suppressing Orgrimmar music means no music plays when the user is actually in Orgrimmar. This should be opt-in with clear messaging: "/fng mute-org -- Suppress Orgrimmar drum music everywhere (including in Orgrimmar)."
+
+### Event Timing During Hearthstone
+
+**Hearthstone sequence:**
+1. Player casts Hearthstone in Nagrand
+2. Cast completes, loading screen appears
+3. `PLAYER_ENTERING_WORLD` fires (during/after loading screen)
+4. `ZONE_CHANGED_NEW_AREA` fires
+5. Zone data becomes available (potentially after a 1-frame delay)
+
+The addon already defers zone checks by one frame via `C_Timer.After(0, ...)` in both `PLAYER_ENTERING_WORLD` and `ZONE_CHANGED_NEW_AREA` handlers. The fade-out approach works here: when either handler detects not-in-Nagrand, start the fade rather than calling `StopMusic()` instantly.
+
+**Edge case:** During a loading screen, the player cannot hear audio anyway. The music effectively "pauses" during loading. The abrupt stop only matters perceptually after the loading screen clears. Starting the fade on `PLAYER_ENTERING_WORLD` (which fires as the loading screen ends) gives the user a smooth audible fade from the moment they can hear again.
 
 ## Feature Dependencies
 
 ```
-[Correct music per subzone]
-    requires [Automatic Nagrand detection]
-    requires [Subzone transition handling]
-    requires [Clean startup/shutdown]
+[Fade-out on zone exit]
+    requires [CVar volume ramping mechanism]
+    requires [Volume save/restore]
+    modifies [stopNagrandMusic() / deactivateAddon()]
 
-[Toggle on/off]
-    requires [Automatic Nagrand detection] (to know what to toggle)
-    enhances [Clean startup/shutdown] (toggle off = same as leaving zone)
-    requires [Persisted settings] (to remember state)
+[No Orgrimmar drum burst on walk-out]
+    requires [Fade-out on zone exit] (delayed StopMusic solves the race)
+    modifies [ZONE_CHANGED_NEW_AREA handler timing]
 
-[Debug mode]
-    enhances [Correct music per subzone] (shows what track is playing)
-    enhances [Subzone transition handling] (shows zone change events)
-    requires [Persisted settings] (to remember debug state)
+[Fade works with any user volume]
+    requires [CVar volume ramping mechanism]
+    built into the fade implementation (not separate)
 
-[Slash command with status]
-    enhances [Toggle on/off]
-    enhances [Debug mode]
-    standalone (no hard dependencies)
+[Volume restoration after fade]
+    requires [CVar volume ramping mechanism]
+    modifies [deactivateAddon() cleanup path]
 
-[Login notification]
-    standalone (no dependencies)
+[Optional Orgrimmar music suppression]
+    independent of fade mechanism
+    requires [MuteSoundFile API availability confirmed in-game]
+    requires [Orgrimmar FileDataID identification]
+    requires [New FixNagrandMusicDB field + slash command]
+    modifies [PLAYER_ENTERING_WORLD handler to re-apply mutes]
 
-[Halaa PvP-aware music]
-    requires [Correct music per subzone]
-    requires [Automatic Nagrand detection]
+[Configurable fade duration]
+    requires [Fade-out on zone exit]
+    requires [New FixNagrandMusicDB field + slash command]
+
+[Debug logging for transitions]
+    requires [Existing debug infrastructure]
+    enhances [Fade-out on zone exit]
+    enhances [Optional Orgrimmar music suppression]
 ```
 
 ### Dependency Notes
 
-- **All features require Nagrand detection:** Every feature gates on the core zone check. This is the foundation.
-- **Toggle requires persistence:** Without `SavedVariables`, toggle resets every login, which is frustrating. These ship together.
-- **Debug mode requires persistence:** Same reasoning. Debug should stay on until the user turns it off.
-- **Halaa awareness is optional and risky:** The war drums may be intentional in Halaa (PvP ambiance). Needs in-game testing to determine if Halaa should be left alone or fixed. Ship without Halaa special-casing first, add if needed.
+- **Fade-out solves two problems at once:** Both the hearthstone cut and the walk-out drum burst are fixed by the same delayed-StopMusic-with-fade approach. These are not separate features from an implementation perspective.
+- **Orgrimmar suppression is independent:** The MuteSoundFile approach stands alone. It does not depend on the fade mechanism and could ship separately or together.
+- **Fade duration config is pure sugar:** The fade works with a hardcoded default. Making it configurable is low-effort once the mechanism exists but is not required.
 
-## MVP Definition
+## MVP Recommendation for This Milestone
 
-### Launch With (v1.0)
+### Must Ship
 
-Minimum viable product -- what ships to CurseForge day one.
+1. **CVar volume fade-out mechanism** -- OnUpdate-based frame with save/restore. This is the foundation for all transition improvements.
+2. **Delayed StopMusic on zone exit** -- Start fade on zone exit detection, call StopMusic at fade completion. Fixes both hearthstone abruptness and walk-out drum burst in one change.
+3. **Volume restoration guarantee** -- Always restore `Sound_MusicVolume` after fade, even if the fade is interrupted (e.g., player re-enters Nagrand mid-fade).
 
-- [x] Correct music per Nagrand subzone -- the entire reason the addon exists
-- [x] Automatic Nagrand detection -- zero-config activation
-- [x] Subzone transition handling -- no jarring silence or wrong tracks between areas
-- [x] Clean startup/shutdown -- no orphaned music outside Nagrand
-- [x] Proper TOC metadata -- installable via CurseForge
-- [x] Login notification -- one line confirming addon is loaded
-- [x] `/fng` slash command with status -- "is it working?" answer
+### Should Ship
 
-### Add After Validation (v1.x)
+4. **Optional Orgrimmar music suppression** -- Via `MuteSoundFile()` with `/fng mute-org` toggle. Contingent on in-game verification that MuteSoundFile works on zone music tracks.
+5. **Debug logging for fade/transition states** -- Extend existing debug mode.
 
-Features to add once the core fix is confirmed working across all subzones.
+### Defer
 
-- [ ] Toggle on/off -- add when users request ability to temporarily disable
-- [ ] Persisted settings via SavedVariables -- add alongside toggle
-- [ ] Debug mode -- add when bug reports come in and you need users to provide diagnostic info
-- [ ] Halaa PvP-aware music -- add after in-game testing confirms Halaa needs special handling
+6. **Configurable fade duration** -- Ship with 1.5s default. Add configurability if users request it.
+7. **Graceful degradation for protected CVars** -- Add pcall wrapper only if issues are reported.
 
-### Future Consideration (v2+)
+## Complexity Assessment
 
-Features to defer until the addon has proven its value.
-
-- [ ] Localized zone name support -- defer until non-English users report the addon not activating (GetZoneText returns localized names, so the addon needs a lookup table per locale; English-only is fine for v1 if most TBC Anniversary players use English clients)
-- [ ] Other zone music fixes -- only if Blizzard introduces more broken zone music and the community asks for it
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Correct music per subzone | HIGH | MEDIUM | P1 |
-| Automatic Nagrand detection | HIGH | LOW | P1 |
-| Subzone transition handling | HIGH | MEDIUM | P1 |
-| Clean startup/shutdown | HIGH | LOW | P1 |
-| TOC metadata | HIGH | LOW | P1 |
-| Login notification | LOW | LOW | P1 |
-| Slash command with status | MEDIUM | LOW | P1 |
-| Toggle on/off | MEDIUM | LOW | P2 |
-| Persisted settings | MEDIUM | LOW | P2 |
-| Debug mode | MEDIUM | LOW | P2 |
-| Halaa PvP awareness | LOW | MEDIUM | P3 |
-| Locale support | MEDIUM | MEDIUM | P3 |
-
-**Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible (likely v1.1)
-- P3: Nice to have, future consideration
-
-## Competitor Feature Analysis
-
-| Feature | Soundtrack | EpicMusicPlayer | BC Reimagined | FixNagrandMusic (Ours) |
-|---------|-----------|-----------------|---------------|------------------------|
-| Fix Nagrand bug specifically | No (general purpose) | No (general purpose) | No (replaces all BC music, not a fix) | Yes -- targeted fix |
-| Zero configuration | No (extensive setup required) | No (UI-driven) | No (file replacement install) | Yes -- install and forget |
-| Subzone-level control | Yes (manual assignment) | Yes (manual) | No (zone-level replacement) | Yes (automatic, preconfigured) |
-| Lightweight | No (large addon with UI) | No (3000+ song library) | Yes (file replacement, no runtime code) | Yes (single Lua file, minimal memory) |
-| Works on TBC Anniversary | Unclear (last updated varies) | Unclear | Yes (static files) | Yes (built for it) |
-| Custom music support | Yes | Yes | No | No (intentional -- restores original) |
-
-**Our competitive position:** The only addon purpose-built to fix this specific bug with zero configuration. Soundtrack and EpicMusicPlayer are general-purpose music overhaul tools -- overkill for users who just want correct Nagrand music. BC Reimagined replaces ALL zone music, not restoring the original. We are the "install and forget" solution.
-
-## Technical Considerations for Features
-
-### Music File Identification (Critical Path)
-
-The hardest part of the core feature is identifying the correct music FileDataIDs or file paths for each Nagrand subzone. Approaches:
-
-1. **FileDataID approach** (preferred for TBC Classic Anniversary): Use numeric IDs with `PlayMusic(fileDataID)`. More reliable, less fragile.
-2. **File path approach** (fallback): Use paths like `"Sound\\Music\\ZoneMusic\\Nagrand\\..."`. Works in TBC Classic since file path support was only dropped in retail patch 8.2.0.
-3. **Reference sources:** The `fondlez/wow-sounds` GitHub repo has TBC 2.4.3 sound file listings. WoWHead TBC sounds database (`wowhead.com/tbc/sounds`) has searchable sound entries with file IDs.
-
-### Zone Name Localization (Deferred Complexity)
-
-`GetZoneText()` returns localized zone names. For English clients, checking `== "Nagrand"` works. For other locales (German: "Nagrand", French: "Nagrand", Spanish: "Nagrand") -- Nagrand may actually be the same across locales since it is a proper noun. **Needs verification.** If it differs, a locale lookup table is needed.
-
-### Event Handling (Core Architecture)
-
-Three events matter:
-- `ZONE_CHANGED` -- subzone transition within Nagrand (most frequent, triggers music switch)
-- `ZONE_CHANGED_NEW_AREA` -- entering/leaving Nagrand entirely (triggers activation/deactivation)
-- `ZONE_CHANGED_INDOORS` -- entering buildings within Nagrand (may need indoor music handling)
-
-All three should be registered. The handler checks zone first, then subzone, then plays the mapped track.
+| Feature | Lines of Code (Est.) | Risk | Notes |
+|---------|---------------------|------|-------|
+| CVar fade mechanism | 40-60 LOC | LOW | Well-understood pattern from VoiceOver addon. OnUpdate + rate + epsilon. |
+| Delayed StopMusic integration | 20-30 LOC | MEDIUM | Must handle edge cases: re-entering Nagrand during fade, logout during fade, toggle-off during fade. |
+| Volume save/restore | 10-15 LOC | LOW | Extend existing `savedMusicCVar` pattern. |
+| Orgrimmar MuteSoundFile | 25-35 LOC | MEDIUM | API availability is HIGH confidence, but effectiveness on zone music is MEDIUM confidence. Needs in-game test. |
+| Slash command extensions | 10-20 LOC | LOW | Extend existing pattern. |
+| Debug logging additions | 10-15 LOC | LOW | Add printDebug calls. |
+| **Total** | **~115-175 LOC** | | Modest addition to the existing ~400 LOC addon. |
 
 ## Sources
 
-- [Blizzard Forum: TBC Nagrand Music Bug](https://us.forums.blizzard.com/en/wow/t/tbc-nagrand-music-bug/993365) -- HIGH confidence, official bug report
-- [Blizzard Forum: Orgrimmar music in Nagrand](https://us.forums.blizzard.com/en/wow/t/orgrimmar-music-in-nagrand/1028737) -- HIGH confidence, confirms specific bug
-- [Blizzard Forum: Is Nagrand music busted (Feb 2026)](https://us.forums.blizzard.com/en/wow/t/is-nagrand-music-busted/2250797) -- HIGH confidence, confirms bug persists
-- [Warcraft Wiki: PlayMusic API](https://warcraft.wiki.gg/wiki/API_PlayMusic) -- HIGH confidence, official API docs
-- [Warcraft Wiki: StopMusic API](https://warcraft.wiki.gg/wiki/API_StopMusic) -- HIGH confidence, StopMusic is immediate post-2.2
-- [Warcraft Wiki: GetSubZoneText API](https://warcraft.wiki.gg/wiki/API_GetSubZoneText) -- HIGH confidence, confirms TBC availability
-- [Warcraft Wiki: ZONE_CHANGED event](https://warcraft.wiki.gg/wiki/ZONE_CHANGED) -- HIGH confidence
-- [Warcraft Wiki: Nagrand subzones](https://warcraft.wiki.gg/wiki/Nagrand) -- HIGH confidence, full subzone list
-- [fondlez/wow-sounds GitHub](https://github.com/fondlez/wow-sounds) -- MEDIUM confidence, TBC 2.4.3 sound file listings
-- [WoWHead TBC Sounds](https://www.wowhead.com/tbc/sounds) -- MEDIUM confidence, searchable sound database
-- [CurseForge: Soundtrack addon](https://www.curseforge.com/wow/addons/soundtrack) -- MEDIUM confidence, competitor analysis
-- [CurseForge: EpicMusicPlayer](https://www.curseforge.com/wow/addons/epic-music-player) -- MEDIUM confidence, competitor analysis
-- [WoWInterface: BC Soundtrack Reimagined](https://www.wowinterface.com/downloads/info26063-BurningCrusadeSoundtrackReimagined.html) -- MEDIUM confidence, competitor analysis
+- [Warcraft Wiki: StopMusic API](https://warcraft.wiki.gg/wiki/API_StopMusic) -- HIGH confidence. Confirms StopMusic is instant post-patch 2.2, only affects PlayMusic-played tracks.
+- [Warcraft Wiki: PlayMusic API](https://warcraft.wiki.gg/wiki/API_PlayMusic) -- HIGH confidence. Confirms PlayMusic fades built-in zone music, loops until stopped.
+- [Warcraft Wiki: MuteSoundFile API](https://warcraft.wiki.gg/wiki/API_MuteSoundFile) -- HIGH confidence. Added in 2.5.1, works on all internal game sounds, resets on client restart.
+- [Warcraft Wiki: ZONE_CHANGED_NEW_AREA](https://warcraft.wiki.gg/wiki/ZONE_CHANGED_NEW_AREA) -- HIGH confidence. Fires on major zone boundary crossing.
+- [Warcraft Wiki: C_Timer.After](https://warcraft.wiki.gg/wiki/API_C_Timer.After) -- HIGH confidence. Duration 0 = next frame.
+- [Warcraft Wiki: OnUpdate handler](https://warcraft.wiki.gg/wiki/UIHANDLER_OnUpdate) -- HIGH confidence. Per-frame callback with elapsed time.
+- [wow-voiceover SlideVolume implementation](https://github.com/mrthinger/wow-voiceover/blob/master/AI_VoiceOver/Compatibility.lua) -- MEDIUM confidence. Shipped addon implementing CVar volume fade via OnUpdate. Confirms the pattern works in TBC-era clients.
+- [Wowhead TBC: Zone-Orgrimmar sound 2901](https://www.wowhead.com/tbc/sound=2901/zone-orgrimmar) -- MEDIUM confidence. FileDataIDs 53198, 53200 for Orgrimmar zone music.
+- [Wowhead TBC: Zone Music Day Orgrimmar City sound 2902](https://www.wowhead.com/tbc/sound=2902/zone-music-day-orgrimmar-city) -- MEDIUM confidence. FileDataID 53197 for Orgrimmar day music.
+- [CurseForge: Soundtrack addon fade behavior](https://www.curseforge.com/wow/addons/soundtrack) -- LOW confidence. Mentions volume-based fade loop lowering by 0.01 increments. Confirms general approach but implementation quality unclear.
+- [CurseForge: MuteSoundFile addon](https://www.curseforge.com/wow/addons/mutesoundfile) -- MEDIUM confidence. Confirms MuteSoundFile API is widely used for muting game sounds.
 
 ---
-*Feature research for: WoW TBC Classic Anniversary Nagrand music bug fix addon*
-*Researched: 2026-02-18*
+*Feature research for: FixNagrandMusic smooth transitions milestone*
+*Researched: 2026-02-19*
