@@ -45,10 +45,10 @@ Plans:
   3. Player types `/fng debug` and sees zone/music events printed to chat as they move through Nagrand
   4. Player logs in and sees a one-line confirmation that FixNagrandMusic is loaded
   5. Player's toggle and debug settings survive logout and reload
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Add slash commands (/fng, /fng toggle, /fng debug), login notification, persisted settings, and enabled guards
 
 ### Phase 3: Packaging and Release
 **Goal**: Addon is packaged and published to CurseForge and GitHub with automated release pipeline and user-facing documentation
