@@ -1,7 +1,0 @@
-package-as: FixNagrandMusic
-
-ignore:
-  - .github
-  - .luacheckrc
-  - .planning
-  - README.md
