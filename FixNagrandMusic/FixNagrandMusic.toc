@@ -4,7 +4,7 @@
 ## Author: mig
 ## Version: @project-version@
 ## X-Category: Audio & Video
-## X-Curse-Project-ID: REPLACE_WITH_ACTUAL_ID
+## X-Curse-Project-ID: 1466355
 ## SavedVariablesPerCharacter: FixNagrandMusicDB
 
 FixNagrandMusic.lua

@@ -40,3 +40,38 @@ jobs:
             "FixNagrandMusic-${VERSION}.zip" \
             --title "FixNagrandMusic $VERSION" \
             --generate-notes
+
+      - name: Upload to CurseForge
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          # Find game version ID for TBC Classic Anniversary (2.5.5)
+          GAME_VERSIONS=$(curl -sf -H "X-Api-Token: $CF_API_KEY" \
+            "https://wow.curseforge.com/api/game/versions")
+
+          VERSION_ID=$(echo "$GAME_VERSIONS" | jq -r \
+            '[.[] | select(.name | test("2\\.5\\.5"))] | first | .id')
+
+          if [ "$VERSION_ID" = "null" ] || [ -z "$VERSION_ID" ]; then
+            echo "::error::Could not find game version ID for 2.5.5"
+            echo "Available versions:"
+            echo "$GAME_VERSIONS" | jq -r '.[] | "\(.id): \(.name)"'
+            exit 1
+          fi
+
+          echo "Using game version ID: $VERSION_ID"
+
+          METADATA=$(jq -nc \
+            --argjson gv "[$VERSION_ID]" \
+            --arg cl "Release $VERSION" \
+            '{changelog: $cl, changelogType: "text", releaseType: "release", gameVersions: $gv}')
+
+          RESPONSE=$(curl -sf -X POST \
+            -H "X-Api-Token: $CF_API_KEY" \
+            -F "metadata=$METADATA" \
+            -F "file=@FixNagrandMusic-${VERSION}.zip" \
+            "https://wow.curseforge.com/api/projects/1466355/upload-file")
+
+          echo "CurseForge upload response: $RESPONSE"
