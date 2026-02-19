@@ -244,6 +244,7 @@ end
 
 -- === SECTION 9: EVENT HANDLERS (MFIX-01, MFIX-06, MFIX-07, MFIX-08) ===
 
+local frame
 local handlers = {}
 
 -- SavedVariables initialization (UI-05)
@@ -329,7 +330,7 @@ end
 
 -- === SECTION 10: FRAME SETUP ===
 
-local frame = CreateFrame("Frame")
+frame = CreateFrame("Frame")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if handlers[event] then

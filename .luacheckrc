@@ -7,6 +7,11 @@ exclude_files = {
     ".release",
 }
 
+-- Suppress unused self/argument warnings in WoW event handler callbacks
+-- These signatures are dictated by the WoW API, not by us
+self = false
+unused_args = false
+
 -- Addon globals (writable)
 globals = {
     "FixNagrandMusicDB",          -- SavedVariablesPerCharacter
