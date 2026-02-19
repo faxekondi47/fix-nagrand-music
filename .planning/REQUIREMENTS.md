@@ -21,11 +21,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### User Interface
 
-- [ ] **UI-01**: `/fng` slash command displays addon status (enabled/disabled, current subzone, current track)
-- [ ] **UI-02**: `/fng toggle` enables/disables the music fix without uninstalling
-- [ ] **UI-03**: `/fng debug` toggles debug mode printing zone/music events to chat
-- [ ] **UI-04**: Brief login notification confirms addon is loaded ("FixNagrandMusic v1.0 loaded. Type /fng for help.")
-- [ ] **UI-05**: Toggle and debug state persisted across sessions via SavedVariablesPerCharacter
+- [x] **UI-01**: `/fng` slash command displays addon status (enabled/disabled, current subzone, current track)
+- [x] **UI-02**: `/fng toggle` enables/disables the music fix without uninstalling
+- [x] **UI-03**: `/fng debug` toggles debug mode printing zone/music events to chat
+- [x] **UI-04**: Brief login notification confirms addon is loaded ("FixNagrandMusic v1.0 loaded. Type /fng for help.")
+- [x] **UI-05**: Toggle and debug state persisted across sessions via SavedVariablesPerCharacter
 
 ### Packaging
 
@@ -77,11 +77,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MFIX-07 | Phase 1 | Complete |
 | MFIX-08 | Phase 1 | Complete |
 | MFIX-09 | Phase 1 | Complete |
-| UI-01 | Phase 2 | Pending |
-| UI-02 | Phase 2 | Pending |
-| UI-03 | Phase 2 | Pending |
-| UI-04 | Phase 2 | Pending |
-| UI-05 | Phase 2 | Pending |
+| UI-01 | Phase 2 | Complete |
+| UI-02 | Phase 2 | Complete |
+| UI-03 | Phase 2 | Complete |
+| UI-04 | Phase 2 | Complete |
+| UI-05 | Phase 2 | Complete |
 | PKG-01 | Phase 1 | Complete |
 | PKG-02 | Phase 3 | Pending |
 | PKG-03 | Phase 3 | Pending |
@@ -94,4 +94,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after roadmap creation*
+*Last updated: 2026-02-19 after Phase 2 completion*

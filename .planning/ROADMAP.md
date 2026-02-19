@@ -13,7 +13,7 @@ FixNagrandMusic is a narrowly scoped WoW TBC Classic Anniversary addon that fixe
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Music Fix** - Zone detection, correct music playback, Orgrimmar suppression, subzone transitions, loading screen resilience, and cleanup
-- [ ] **Phase 2: User Interface** - Slash commands, toggle, debug mode, login notification, and persisted settings
+- [x] **Phase 2: User Interface** - Slash commands, toggle, debug mode, login notification, and persisted settings
 - [ ] **Phase 3: Packaging and Release** - GitHub Actions CI/CD, CurseForge distribution, and README documentation
 
 ## Phase Details
@@ -48,7 +48,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md -- Add slash commands (/fng, /fng toggle, /fng debug), login notification, persisted settings, and enabled guards
+- [x] 02-01-PLAN.md -- Add slash commands (/fng, /fng toggle, /fng debug), login notification, persisted settings, and enabled guards
 
 ### Phase 3: Packaging and Release
 **Goal**: Addon is packaged and published to CurseForge and GitHub with automated release pipeline and user-facing documentation
@@ -71,5 +71,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Music Fix | 3/3 | Complete | 2026-02-18 |
-| 2. User Interface | 0/1 | Not started | - |
+| 2. User Interface | 1/1 | Complete | 2026-02-19 |
 | 3. Packaging and Release | 0/1 | Not started | - |

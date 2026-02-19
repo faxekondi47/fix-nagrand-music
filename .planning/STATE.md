@@ -10,27 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 2 of 3 (User Interface)
-Plan: 0 of 1 in current phase
-Status: Phase 1 Complete (all 3 plans including gap closure) -- Ready for Phase 2
-Last activity: 2026-02-18 -- Completed 01-03-PLAN.md (MFIX-02 gap closure)
+Plan: 1 of 1 in current phase
+Status: Phase 2 Complete -- Ready for Phase 3
+Last activity: 2026-02-19 -- Completed 02-01-PLAN.md (slash commands, toggle, debug, login notification)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 2min
-- Total execution time: 0.08 hours
+- Total execution time: 0.10 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-core-music-fix | 3/3 | 5min | 1.7min |
+| 02-user-interface | 1/1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min), 01-02 (1min), 01-03 (2min)
+- Last 5 plans: 01-01 (2min), 01-02 (1min), 01-03 (2min), 02-01 (2min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -55,6 +56,10 @@ Recent decisions affecting current work:
 - [01-02]: Zero code changes required post-validation -- implementation correct on first pass
 - [01-03]: updateSubzone() called at start of playNagrandMusic() -- piggybacks existing event flow, no new event handlers needed
 - [01-03]: currentSubzone reset to nil in deactivateAddon() -- consistent with existing state variable cleanup pattern
+- [02-01]: SavedVariablesPerCharacter (not SavedVariables) for per-character toggle/debug settings
+- [02-01]: FNG_PREFIX constant replaces all old prefix strings for consistent branding
+- [02-01]: TRACK_PATHS hardcoded lookup since no runtime API resolves FileDataID to path
+- [02-01]: ADDON_LOADED handler unregisters itself after initialization
 
 ### Pending Todos
 
@@ -70,5 +75,5 @@ None -- all Phase 1 blockers resolved by in-game validation.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-user-interface/02-CONTEXT.md
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-user-interface/02-01-SUMMARY.md
