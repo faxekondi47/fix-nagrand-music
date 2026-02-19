@@ -30,9 +30,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Packaging
 
 - [x] **PKG-01**: Correct .toc file with Interface 20505, addon metadata, and SavedVariables declaration
-- [ ] **PKG-02**: GitHub Actions workflow using BigWigsMods/packager@v2 for automated releases
-- [ ] **PKG-03**: .pkgmeta file configured for CurseForge TBC Classic Anniversary distribution
-- [ ] **PKG-04**: README.md with installation instructions, usage, and known limitations
+- [x] **PKG-02**: GitHub Actions workflow using BigWigsMods/packager@v2 for automated releases
+- [x] **PKG-03**: .pkgmeta file configured for CurseForge TBC Classic Anniversary distribution
+- [x] **PKG-04**: README.md with installation instructions, usage, and known limitations
 
 ## v2 Requirements
 
@@ -83,9 +83,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-04 | Phase 2 | Complete |
 | UI-05 | Phase 2 | Complete |
 | PKG-01 | Phase 1 | Complete |
-| PKG-02 | Phase 3 | Pending |
-| PKG-03 | Phase 3 | Pending |
-| PKG-04 | Phase 3 | Pending |
+| PKG-02 | Phase 3 | Complete |
+| PKG-03 | Phase 3 | Complete |
+| PKG-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 18 total
